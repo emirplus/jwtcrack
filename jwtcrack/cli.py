@@ -39,7 +39,17 @@ def main():
     gen_parser.add_argument("--secret", "-s", required=True)
     gen_parser.add_argument("--claims", "-c", required=True)
 
+    gui_parser = subparsers.add_parser("gui", help="Launch interactive web dashboard")
+    gui_parser.add_argument("--port", "-p", type=int, default=8765, help="Port to serve dashboard on")
+    parser.add_argument("--gui", action="store_true", help="Launch interactive web dashboard")
+
     args = parser.parse_args()
+
+    if args.gui or args.command == "gui":
+        from jwtcrack.gui import launch_gui
+        port = getattr(args, "port", 8765)
+        launch_gui(port=port)
+        return
 
     if args.command is None:
         _interactive_mode()
@@ -97,9 +107,14 @@ def _interactive_mode():
 
         action = Prompt.ask(
             "[bold yellow]What do you want to do?[/bold yellow]",
-            choices=["decode", "analyze", "crack", "forge"],
-            default="decode",
+            choices=["decode", "analyze", "crack", "forge", "gui"],
+            default="gui",
         )
+
+        if action == "gui":
+            from jwtcrack.gui import launch_gui
+            launch_gui()
+            return
 
         from jwtcrack.decoder import decode_token
         from jwtcrack.display import display_decoded, display_analysis, display_crack_result, display_forged

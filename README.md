@@ -8,6 +8,7 @@ zero external dependencies beyond `rich` for terminal formatting. built using st
 
 ## features
 
+- **interactive web dashboard**: launch a local cyberpunk-styled dark mode gui in your browser (`jwtcrack gui`)
 - **decode**: parse and inspect token header, payload, and signature without needing the signing key
 - **analyze**: audit token security posture (`alg:none` bypasses, weak symmetric hmac, expired timestamps, missing standard claims)
 - **crack**: multi-threaded wordlist attack against hs256, hs384, and hs512 tokens with live throughput stats
@@ -25,10 +26,16 @@ pip install -e .
 or run directly:
 
 ```bash
-python -m jwtcrack
+python -m jwtcrack gui
 ```
 
 ## usage
+
+### launch web dashboard (recommended)
+```bash
+jwtcrack gui
+```
+opens an interactive dark-mode dashboard at `http://127.0.0.1:8765` in your default browser. Paste any token to view decoded claims, audit security warnings, crack the secret in real-time, and forge elevated admin tokens with one click.
 
 ### 1. decode a token
 ```bash

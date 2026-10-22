@@ -161,5 +161,12 @@ class TestForger(unittest.TestCase):
         self.assertEqual(forged["payload"]["exp"], 1000 + 3600)
 
 
+class TestGuiEndpoints(unittest.TestCase):
+    def test_gui_html_page_exists(self):
+        from jwtcrack.gui import HTML_PAGE
+        self.assertIn("jwtcrack", HTML_PAGE)
+        self.assertIn("Forge Admin Token", HTML_PAGE)
+
+
 if __name__ == "__main__":
     unittest.main()
