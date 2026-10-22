@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jwtcrack"
+version = "1.0.0"
+description = "JWT Token Analyzer & Secret Brute-Forcer"
+requires-python = ">=3.9"
+dependencies = ["rich>=13.0"]
+
+[project.scripts]
+jwtcrack = "jwtcrack.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["jwtcrack*"]
