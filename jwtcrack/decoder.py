@@ -17,6 +17,11 @@ def base64url_encode(data):
 
 def split_token(token):
     token = token.strip()
+    if token.startswith("CfDJ8"):
+        raise ValueError(
+            "Input is an ASP.NET Core Data Protection encrypted ticket/cookie ('CfDJ8...'), "
+            "not a JWT. Look for the 'Bearer eyJ...' token in Authorization headers."
+        )
     parts = token.split(".")
     if len(parts) not in (2, 3):
         raise ValueError(f"Invalid JWT: expected 2 or 3 parts, got {len(parts)}")

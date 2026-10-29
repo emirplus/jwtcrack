@@ -124,5 +124,12 @@ class TestAspNetModule(unittest.TestCase):
         self.assertIn("ASP.NET Core Role Claim Confusion", titles)
 
 
+    def test_cfdj8_cookie_detection(self):
+        cookie = "CfDJ8KpBAVaTUwBDvRoHFzP"
+        with self.assertRaises(ValueError) as ctx:
+            decode_token(cookie)
+        self.assertIn("ASP.NET Core Data Protection encrypted ticket/cookie", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
