@@ -22,6 +22,10 @@ def analyze_token(decoded):
     findings.extend(_check_none_signature(header, decoded["signature_b64"]))
     findings.extend(_check_kid_injection(header))
 
+    from jwtcrack.aspnet import is_aspnet_token, check_aspnet_issues
+    if is_aspnet_token(payload):
+        findings.extend(check_aspnet_issues(payload))
+
     return findings
 
 

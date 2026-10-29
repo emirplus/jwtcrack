@@ -36,6 +36,19 @@ def display_decoded(decoded):
     console.print(payload_table)
     console.print()
 
+    from jwtcrack.aspnet import is_aspnet_token, ASPNET_TO_STANDARD
+    if is_aspnet_token(decoded["payload"]):
+        aspnet_table = Table(title="ASP.NET Core Claims (Normalized)", show_header=True, header_style="bold green")
+        aspnet_table.add_column("Standard Claim", style="bold green")
+        aspnet_table.add_column("Value", style="white")
+        aspnet_table.add_column("Original ASP.NET XML Schema URI", style="dim")
+        for k, v in decoded["payload"].items():
+            if k in ASPNET_TO_STANDARD:
+                aspnet_table.add_row(ASPNET_TO_STANDARD[k], json.dumps(v) if isinstance(v, (dict, list)) else str(v), k)
+        if aspnet_table.row_count > 0:
+            console.print(aspnet_table)
+            console.print()
+
     sig_preview = decoded["signature_b64"][:32] + "..." if len(decoded["signature_b64"]) > 32 else (decoded["signature_b64"] or "[dim]None[/dim]")
     sig_panel = Panel(
         f"[dim]Algorithm:[/] [bold]{decoded['header'].get('alg', 'Unknown')}[/]\n"

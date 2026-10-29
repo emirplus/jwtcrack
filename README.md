@@ -13,6 +13,7 @@ zero external dependencies beyond `rich` for terminal formatting. built using st
 - **analyze**: audit token security posture (`alg:none` bypasses, weak symmetric hmac, expired timestamps, missing standard claims)
 - **crack**: multi-threaded wordlist attack against hs256, hs384, and hs512 tokens with live throughput stats
 - **forge**: generate new tokens or alter existing claims (e.g. modify role or extend expiration) once the secret is known or with `alg:none`
+- **asp.net core support**: audit and normalize Microsoft XML schema claims (`schemas.microsoft.com/ws/2008/06/identity/claims/role`), detect claim confusion vulnerabilities, and forge ASP.NET Core compatible tokens (`--aspnet`)
 - **zero dependencies**: pure python stdlib implementation (`hmac`, `hashlib`, `base64`, `concurrent.futures`)
 
 ## installation
@@ -62,7 +63,16 @@ jwtcrack forge <token> --secret "password123" --claims '{"role":"admin"}' --exte
 jwtcrack generate --secret "mysecret" --claims '{"sub":"user123","role":"admin"}'
 ```
 
-### 6. interactive mode
+### 6. asp.net core claim inspection & forging
+```bash
+# inspect and map asp.net xml schema claims
+jwtcrack aspnet <token>
+
+# forge an asp.net core token using standard json claims
+jwtcrack forge <token> --secret "mysecret" --claims '{"role":"Administrator"}' --aspnet
+```
+
+### 7. interactive mode
 run without arguments to launch the interactive prompt:
 ```bash
 jwtcrack

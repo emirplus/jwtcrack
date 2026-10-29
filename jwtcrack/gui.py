@@ -341,11 +341,12 @@ class JwtRequestHandler(http.server.BaseHTTPRequestHandler):
             token = payload.get("token", "")
             secret = payload.get("secret", "")
             claims = payload.get("claims", {})
+            as_aspnet = payload.get("as_aspnet", False)
             try:
                 if not secret:
                     forged = forge_none_token(token, claims)
                 else:
-                    forged = forge_token(token, secret, claims)
+                    forged = forge_token(token, secret, claims, as_aspnet=as_aspnet)
                 self._send_json({"forged": forged})
             except Exception as e:
                 self._send_json({"error": str(e)}, status=400)

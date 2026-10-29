@@ -44,10 +44,14 @@ def _parse_duration(duration_str):
     return value * multipliers[unit]
 
 
-def forge_token(original_token, secret, new_claims, extend_exp=None):
+def forge_token(original_token, secret, new_claims, extend_exp=None, as_aspnet=False):
     decoded = decode_token(original_token)
     header = decoded["header"]
     payload = decoded["payload"]
+
+    if as_aspnet:
+        from jwtcrack.aspnet import to_aspnet_claims
+        new_claims = to_aspnet_claims(new_claims)
 
     payload.update(new_claims)
 
@@ -73,8 +77,12 @@ def forge_token(original_token, secret, new_claims, extend_exp=None):
     }
 
 
-def generate_token(secret, claims, alg="HS256"):
+def generate_token(secret, claims, alg="HS256", as_aspnet=False):
     header = {"alg": alg, "typ": "JWT"}
+
+    if as_aspnet:
+        from jwtcrack.aspnet import to_aspnet_claims
+        claims = to_aspnet_claims(claims)
 
     if "iat" not in claims:
         claims["iat"] = int(time.time())
