@@ -38,15 +38,15 @@ def _check_algorithm(header):
         findings.append({
             "severity": SEVERITY_CRITICAL,
             "title": "Algorithm None Attack",
-            "description": "Token uses 'none' algorithm — signature verification is disabled. "
-                           "Anyone can forge tokens without a secret.",
+            "description": "Token uses 'none' algorithm — signature verification is disabled. Anyone can forge tokens without a secret.",
+            "remediation": "Reject tokens with alg='none' explicitly (e.g. verify with algorithms=['HS256']).",
         })
     elif header.get("alg", "") in WEAK_ALGORITHMS:
         findings.append({
             "severity": SEVERITY_MEDIUM,
             "title": "Weak HMAC Algorithm",
-            "description": f"Token uses {header['alg']} which is symmetric and vulnerable to "
-                           f"brute-force attacks if the secret is weak.",
+            "description": f"Token uses {header['alg']} which is symmetric and vulnerable to brute-force attacks if the secret is weak.",
+            "remediation": "Use a cryptographically random secret with at least 256 bits of entropy, or migrate to RS256/ES256.",
         })
 
     if "alg" not in header:
@@ -54,6 +54,7 @@ def _check_algorithm(header):
             "severity": SEVERITY_HIGH,
             "title": "Missing Algorithm",
             "description": "No 'alg' field in header. This is non-standard and may indicate tampering.",
+            "remediation": "Reject tokens without a recognized 'alg' header.",
         })
 
     return findings
@@ -71,12 +72,14 @@ def _check_expiration(payload):
                     "severity": SEVERITY_HIGH,
                     "title": "Expired Token",
                     "description": f"Token expired at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime(exp))}.",
+                    "remediation": "Reject expired tokens and require re-authentication.",
                 })
         except (ValueError, TypeError):
             findings.append({
                 "severity": SEVERITY_MEDIUM,
                 "title": "Invalid Expiration",
                 "description": "The 'exp' claim is not a valid timestamp.",
+                "remediation": "Ensure 'exp' claim is formatted as a valid integer Unix timestamp.",
             })
 
     if "nbf" in payload:
@@ -87,6 +90,7 @@ def _check_expiration(payload):
                     "severity": SEVERITY_INFO,
                     "title": "Token Not Yet Valid",
                     "description": f"Token becomes valid at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime(nbf))}.",
+                    "remediation": "Wait until 'nbf' timestamp has passed before processing requests.",
                 })
         except (ValueError, TypeError):
             pass
@@ -102,8 +106,8 @@ def _check_missing_claims(payload):
         findings.append({
             "severity": SEVERITY_LOW,
             "title": "Missing Recommended Claims",
-            "description": f"Token is missing: {', '.join(sorted(missing))}. "
-                           f"These claims are recommended by RFC 7519.",
+            "description": f"Token is missing: {', '.join(sorted(missing))}. These claims are recommended by RFC 7519.",
+            "remediation": f"Include standard claims ({', '.join(sorted(missing))}) to restrict token scope and validity.",
         })
 
     return findings
@@ -117,8 +121,8 @@ def _check_none_signature(header, signature_b64):
         findings.append({
             "severity": SEVERITY_CRITICAL,
             "title": "Missing Signature",
-            "description": f"Algorithm is '{alg}' but the signature is empty. "
-                           f"This token may have been tampered with.",
+            "description": f"Algorithm is '{alg}' but the signature is empty. This token may have been tampered with.",
+            "remediation": "Reject unsigned tokens immediately during authentication checks.",
         })
 
     return findings
@@ -132,6 +136,7 @@ def _check_key_confusion(header):
             "severity": SEVERITY_INFO,
             "title": "Asymmetric Key (Potential Key Confusion)",
             "description": f"Token uses asymmetric algorithm '{alg}'. If backend fails to enforce key type, an attacker can forge tokens using HS256 with the server public key as HMAC secret (CVE-2015-9235).",
+            "remediation": f"Explicitly whitelist allowed algorithms on the server (e.g. algorithms=['{alg}']) instead of trusting header 'alg'.",
         })
     return findings
 
@@ -148,8 +153,8 @@ def _check_kid_injection(header):
                 findings.append({
                     "severity": SEVERITY_HIGH,
                     "title": "Potential KID Injection",
-                    "description": f"The 'kid' header contains suspicious characters: '{kid}'. "
-                                   f"This may be a path traversal or injection attempt.",
+                    "description": f"The 'kid' header contains suspicious characters: '{kid}'. This may be a path traversal or injection attempt.",
+                    "remediation": "Validate 'kid' against a strict internal lookup table or whitelist; never concatenate into file paths or database queries.",
                 })
                 break
 

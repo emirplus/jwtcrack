@@ -63,6 +63,7 @@ def check_aspnet_issues(payload):
                 "ASP.NET Core User.IsInRole() will fail to recognize the role unless "
                 "ClaimTypeMap is disabled via ClearPrefix() or InboundClaimTypeMap."
             ),
+            "remediation": "Add 'JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear()' in Program.cs.",
         })
 
     if has_std_role and has_ms_role:
@@ -73,6 +74,7 @@ def check_aspnet_issues(payload):
                 "Token contains both standard 'role' and Microsoft schema role URI. "
                 "Inconsistent claim validation in backend middleware can lead to privilege desync."
             ),
+            "remediation": "Unify token generation to use only Microsoft XML URIs or only standard claim names.",
         })
 
     has_std_name = "name" in payload or "sub" in payload
@@ -86,6 +88,7 @@ def check_aspnet_issues(payload):
             "description": (
                 "Token mixes ASP.NET XML schemas with standard subject/name claims."
             ),
+            "remediation": "Standardize all identity claims to standard RFC 7519 names or Microsoft XML schema URIs.",
         })
 
     return findings

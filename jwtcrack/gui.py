@@ -133,8 +133,19 @@ HTML_PAGE = """<!DOCTYPE html>
   <div class="card">
     <h2>
       <span>Target Token</span>
-      <button class="secondary" style="font-size: 11px; padding: 4px 8px;" onclick="loadSample()">Load Sample Token</button>
+      <div style="display: flex; gap: 6px;">
+        <select id="labSelect" style="width: auto; padding: 4px 8px; font-size: 11px;" onchange="loadLab(this.value)">
+          <option value="">-- Practice Labs (Beginner CTF) --</option>
+          <option value="1">Lab 1: Weak Secret</option>
+          <option value="2">Lab 2: alg: none Bypass</option>
+          <option value="3">Lab 3: Expiration Tampering</option>
+          <option value="4">Lab 4: Key Confusion</option>
+          <option value="5">Lab 5: ASP.NET Role Desync</option>
+        </select>
+        <button class="secondary" style="font-size: 11px; padding: 4px 8px;" onclick="loadSample()">Sample Token</button>
+      </div>
     </h2>
+    <div id="labInfoBox" style="display:none; background: #132338; border: 1px solid var(--accent); padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 12px;"></div>
     <textarea id="tokenInput" rows="3" placeholder="Paste your JWT token here (eyJhbGciOi...)"></textarea>
     <div class="btn-group">
       <button onclick="runAudit()">Inspect & Analyze</button>
@@ -187,8 +198,28 @@ HTML_PAGE = """<!DOCTYPE html>
 <script>
 const sampleToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkVtaXIiLCJyb2xlIjoidXNlciIsImlhdCI6MTY3MDAwMDAwMCwiZXhwIjoxNjcwMDAzNjAwfQ.jG53_1P1g5_c3s003w0d8vL7d19c118";
 
+const LABS = [
+  { id: 1, title: "Lab 1: Weak Secret", objective: "Crack the secret with dictionary attack and forge admin token.", token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAxIiwibmFtZSI6IkFsaWNlIiwicm9sZSI6InVzZXIifQ.Nf-N8lV47i431r8qj9Yl5lU8Yd4ZpA2nC3mK7sX0eWs", hint: "Click 'Crack Secret' to find the weak password 'dragon'." },
+  { id: 2, title: "Lab 2: alg: none Bypass", objective: "Elevate your role from user to admin with no secret required.", token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMDAyIiwicm9sZSI6InVzZXIiLCJpYXQiOjE3MDAwMDAwMDB9.xV7k8W2e9zL4pQ1mN5bV3cR6tY8uI0oP2aS4dF6gH8j", hint: "Click 'Forge Admin Token' and leave secret blank to exploit alg:none." },
+  { id: 3, title: "Lab 3: Expiration Tampering", objective: "Token expired in 2020. Update exp to current time.", token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzMDAzIiwicm9sZSI6ImVkaXRvciIsImV4cCI6MTU3NzgzNjgwMH0.8vL2_qY3xP7nK5sR9bW1cZ4mN6tY8uI0oP2aS4dF6gH", hint: "Notice 'Expired Token' warning. Re-sign with new timestamp once secret is cracked." },
+  { id: 4, title: "Lab 4: Key Confusion", objective: "Server verifies RS256 with public key. Re-sign as HS256 with public key bytes.", token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MDA0Iiwicm9sZSI6InZpZXdlciJ9.fakeSigRSA", hint: "Inspect finding 'Asymmetric Key (Potential Key Confusion)'." },
+  { id: 5, title: "Lab 5: ASP.NET Role Desync", objective: "Detect role incompatibility with ASP.NET Core User.IsInRole().", token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MDA1Iiwicm9sZSI6InVzZXIifQ.fakeSigASP", hint: "Inspect ASP.NET finding and use --aspnet to forge Microsoft schema role." }
+];
+
 function loadSample() {
   document.getElementById('tokenInput').value = sampleToken;
+  document.getElementById('labInfoBox').style.display = 'none';
+  runAudit();
+}
+
+function loadLab(id) {
+  if (!id) return;
+  const lab = LABS.find(l => l.id == id);
+  if (!lab) return;
+  document.getElementById('tokenInput').value = lab.token;
+  const info = document.getElementById('labInfoBox');
+  info.style.display = 'block';
+  info.innerHTML = `<strong>${lab.title}</strong>: ${lab.objective} <span style="color: var(--accent); display: block; margin-top: 4px;">Hint: ${lab.hint}</span>`;
   runAudit();
 }
 
@@ -216,7 +247,8 @@ async function runAudit() {
       data.findings.forEach(f => {
         const item = document.createElement('div');
         item.className = 'finding ' + f.severity;
-        item.innerHTML = `<div class="finding-title">[${f.severity}] ${f.title}</div><div class="finding-desc">${f.description}</div>`;
+        const remHtml = f.remediation ? `<div style="margin-top:6px; color: var(--green); font-size: 11px;"><strong>Remediation:</strong> ${f.remediation}</div>` : '';
+        item.innerHTML = `<div class="finding-title">[${f.severity}] ${f.title}</div><div class="finding-desc">${f.description}</div>${remHtml}`;
         findingsDiv.appendChild(item);
       });
     }

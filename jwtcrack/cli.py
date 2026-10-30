@@ -53,6 +53,12 @@ def main():
     exploit_parser.add_argument("--kid", default=None, help="Custom kid header value")
     exploit_parser.add_argument("--secret", "-s", default=None, help="Secret for SQLi attack")
 
+    learn_parser = subparsers.add_parser("learn", help="Explain token anatomy & security in beginner-friendly terms")
+    learn_parser.add_argument("token", nargs="?", default=None, help="Token to analyze (uses sample if omitted)")
+
+    lab_parser = subparsers.add_parser("lab", help="Interactive beginner practice challenges (CTF)")
+    lab_parser.add_argument("id", type=int, nargs="?", default=None, help="Lab challenge ID (1-5)")
+
     gui_parser = subparsers.add_parser("gui", help="Launch interactive web dashboard")
     gui_parser.add_argument("--port", "-p", type=int, default=8765, help="Port to serve dashboard on")
     parser.add_argument("--gui", action="store_true", help="Launch interactive web dashboard")
@@ -142,6 +148,26 @@ def main():
             res = forge_blank_secret(args.token, claims)
         display_forged(res)
 
+    elif args.command == "learn":
+        from jwtcrack.decoder import decode_token
+        from jwtcrack.education import explain_token
+        from jwtcrack.display import display_explanation
+        sample = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAxIiwibmFtZSI6IkFsaWNlIiwicm9sZSI6InVzZXIiLCJleHAiOjE3MDAwMDAwMDB9.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+        tok = args.token if args.token else sample
+        decoded = decode_token(tok)
+        exp = explain_token(decoded)
+        display_explanation(decoded, exp)
+
+    elif args.command == "lab":
+        from jwtcrack.education import list_labs, get_lab
+        from jwtcrack.display import display_labs
+        if args.id is not None:
+            active = get_lab(args.id)
+            display_labs([], active_lab=active)
+        else:
+            labs = list_labs()
+            display_labs(labs)
+
 
 def _interactive_mode():
     try:
@@ -151,15 +177,10 @@ def _interactive_mode():
         console = Console()
         console.print("\n[bold cyan]jwtcrack[/bold cyan] — JWT Token Analyzer & Secret Brute-Forcer\n")
 
-        token = Prompt.ask("[bold yellow]Paste your JWT token[/bold yellow]")
-        if not token.strip():
-            console.print("[red]No token provided.[/red]")
-            sys.exit(1)
-
         action = Prompt.ask(
             "[bold yellow]What do you want to do?[/bold yellow]",
-            choices=["decode", "analyze", "aspnet", "exploit", "crack", "forge", "gui"],
-            default="gui",
+            choices=["learn", "lab", "decode", "analyze", "aspnet", "exploit", "crack", "forge", "gui"],
+            default="learn",
         )
 
         if action == "gui":
@@ -167,10 +188,32 @@ def _interactive_mode():
             launch_gui()
             return
 
-        from jwtcrack.decoder import decode_token
-        from jwtcrack.display import display_decoded, display_analysis, display_crack_result, display_forged
+        if action == "lab":
+            from jwtcrack.education import list_labs, get_lab
+            from jwtcrack.display import display_labs
+            labs = list_labs()
+            display_labs(labs)
+            lab_choice = Prompt.ask("[bold yellow]Enter Lab ID to inspect (or Enter to return)[/bold yellow]", default="")
+            if lab_choice.isdigit():
+                active = get_lab(int(lab_choice))
+                display_labs([], active_lab=active)
+            return
 
-        if action == "decode":
+        token = Prompt.ask("[bold yellow]Paste your JWT token (or Enter for sample)[/bold yellow]", default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAxIiwibmFtZSI6IkFsaWNlIiwicm9sZSI6InVzZXIiLCJleHAiOjE3MDAwMDAwMDB9.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
+        if not token.strip():
+            console.print("[red]No token provided.[/red]")
+            sys.exit(1)
+
+        from jwtcrack.decoder import decode_token
+        from jwtcrack.display import display_decoded, display_analysis, display_crack_result, display_forged, display_explanation
+
+        if action == "learn":
+            from jwtcrack.education import explain_token
+            decoded = decode_token(token)
+            exp = explain_token(decoded)
+            display_explanation(decoded, exp)
+
+        elif action == "decode":
             result = decode_token(token)
             display_decoded(result)
 

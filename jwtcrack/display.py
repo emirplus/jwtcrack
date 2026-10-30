@@ -68,18 +68,124 @@ def display_analysis(decoded, findings):
         console.print()
         return
 
-    table = Table(title=f"Security Findings ({len(findings)} issues)", show_header=True, header_style="bold magenta")
+    table = Table(title=f"Security Findings & Remediation ({len(findings)} issues)", show_header=True, header_style="bold magenta")
     table.add_column("Severity", justify="center", width=12)
-    table.add_column("Issue", style="bold")
-    table.add_column("Description")
+    table.add_column("Issue", style="bold", width=22)
+    table.add_column("Description", width=34)
+    table.add_column("How to Fix (Remediation)", style="green")
 
     for f in findings:
         sev = f["severity"]
         style = SEVERITY_STYLES.get(sev, "white")
-        table.add_row(f"[{style}] {sev} [/]", f["title"], f["description"])
+        remediation = f.get("remediation", "Follow RFC 7519 guidelines.")
+        table.add_row(f"[{style}] {sev} [/]", f["title"], f["description"], remediation)
 
     console.print(table)
     console.print()
+
+
+def display_explanation(decoded, explanation):
+    console.print()
+    h_b64 = decoded["header_b64"]
+    p_b64 = decoded["payload_b64"]
+    s_b64 = decoded["signature_b64"]
+
+    colored_token = Text()
+    colored_token.append(h_b64, style="bold red")
+    colored_token.append(".", style="white")
+    colored_token.append(p_b64, style="bold green")
+    colored_token.append(".", style="white")
+    colored_token.append(s_b64 or "", style="bold cyan")
+
+    token_panel = Panel(
+        colored_token,
+        title="[bold]Anatomy of a JWT[/bold]",
+        subtitle="[red]Red: Header[/red] | [green]Green: Payload[/green] | [cyan]Cyan: Signature[/cyan]",
+        border_style="magenta",
+    )
+    console.print(token_panel)
+    console.print()
+
+    alg_table = Table(title="1. Header & Cryptographic Algorithm", show_header=True, header_style="bold red")
+    alg_table.add_column("Property", style="bold", width=20)
+    alg_table.add_column("Value / Explanation", style="white")
+    alg_table.add_row("Algorithm (alg)", explanation["algorithm"])
+    alg_table.add_row("Key Type", explanation["algorithm_type"])
+    alg_table.add_row("How It Works", explanation["algorithm_detail"])
+    console.print(alg_table)
+    console.print()
+
+    claims_table = Table(title="2. Payload Claims (Decoded Data)", show_header=True, header_style="bold green")
+    claims_table.add_column("Claim", style="bold green", width=14)
+    claims_table.add_column("Standard Name", style="bold white", width=18)
+    claims_table.add_column("Value", style="cyan", width=22)
+    claims_table.add_column("Human Meaning / Purpose", style="dim")
+
+    for c in explanation["claims"]:
+        val_str = str(c["value"])
+        if c.get("human_readable"):
+            val_str += f"\n({c['human_readable']})"
+        claims_table.add_row(c["key"], c["title"], val_str, c["description"])
+
+    console.print(claims_table)
+    console.print()
+
+    tips_text = Text()
+    tips_text.append("1. JWTs are NOT encrypted by default — anyone who sees the token can read all claims.\n", style="yellow")
+    tips_text.append("2. The signature ONLY guarantees integrity (nobody changed the claims in transit).\n", style="white")
+    tips_text.append("3. Never store passwords, API keys, or sensitive PII inside JWT claims.\n", style="red")
+    tips_text.append("4. Always verify the signature server-side before trusting any claim value.\n", style="green")
+
+    tips_panel = Panel(
+        tips_text,
+        title="[bold yellow]Beginner Security Rules[/bold yellow]",
+        border_style="yellow",
+    )
+    console.print(tips_panel)
+    console.print()
+
+
+def display_labs(labs, active_lab=None):
+    console.print()
+    if active_lab:
+        content = Text()
+        content.append(f"Title: {active_lab['title']}\n", style="bold cyan")
+        content.append(f"Difficulty: {active_lab['difficulty']}  |  Category: {active_lab['category']}\n\n", style="bold yellow")
+        content.append("Objective:\n", style="bold white")
+        content.append(f"{active_lab['objective']}\n\n", style="white")
+        content.append("Challenge Token:\n", style="bold magenta")
+        content.append(f"{active_lab['token']}\n\n", style="dim cyan")
+        content.append("Hint:\n", style="bold green")
+        content.append(f"{active_lab['hint']}\n", style="green")
+
+        panel = Panel(
+            content,
+            title=f"[bold green]Practice Lab #{active_lab['id']}[/bold green]",
+            border_style="green",
+        )
+        console.print(panel)
+        console.print()
+        return
+
+    table = Table(title="Interactive Beginner Practice Labs (CTF)", show_header=True, header_style="bold cyan")
+    table.add_column("ID", justify="center", width=6)
+    table.add_column("Challenge Name", style="bold")
+    table.add_column("Difficulty", justify="center", width=14)
+    table.add_column("Category", width=20)
+    table.add_column("Learning Objective")
+
+    for lab in labs:
+        diff_style = "green" if lab["difficulty"] == "Beginner" else "yellow"
+        table.add_row(
+            str(lab["id"]),
+            lab["title"],
+            f"[{diff_style}]{lab['difficulty']}[/{diff_style}]",
+            lab["category"],
+            lab["objective"],
+        )
+
+    console.print(table)
+    console.print("[dim]Run 'jwtcrack lab <id>' (e.g. 'jwtcrack lab 1') to start a challenge.[/dim]\n")
 
 
 def display_crack_result(result):

