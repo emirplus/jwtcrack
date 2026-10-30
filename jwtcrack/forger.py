@@ -20,8 +20,11 @@ def _sign_token(signing_input, secret, alg):
     if alg not in algorithms:
         raise ValueError(f"Unsupported algorithm: {alg}")
 
+    if isinstance(secret, str):
+        secret = secret.encode("utf-8")
+
     signature = hmac.new(
-        secret.encode("utf-8"),
+        secret,
         signing_input.encode("utf-8"),
         algorithms[alg],
     ).digest()

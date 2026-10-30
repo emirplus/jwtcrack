@@ -17,6 +17,7 @@ def analyze_token(decoded):
     payload = decoded["payload"]
 
     findings.extend(_check_algorithm(header))
+    findings.extend(_check_key_confusion(header))
     findings.extend(_check_expiration(payload))
     findings.extend(_check_missing_claims(payload))
     findings.extend(_check_none_signature(header, decoded["signature_b64"]))
@@ -123,14 +124,27 @@ def _check_none_signature(header, signature_b64):
     return findings
 
 
+def _check_key_confusion(header):
+    findings = []
+    alg = header.get("alg", "").upper()
+    if alg in STRONG_ALGORITHMS:
+        findings.append({
+            "severity": SEVERITY_INFO,
+            "title": "Asymmetric Key (Potential Key Confusion)",
+            "description": f"Token uses asymmetric algorithm '{alg}'. If backend fails to enforce key type, an attacker can forge tokens using HS256 with the server public key as HMAC secret (CVE-2015-9235).",
+        })
+    return findings
+
+
 def _check_kid_injection(header):
     findings = []
 
     if "kid" in header:
         kid = str(header["kid"])
-        dangerous_chars = ["../", "/", "\\", ";", "|", "&", "`", "$", "{", "}"]
+        dangerous_chars = ["../", "..\\", "/dev/null", "'", '"', ";", "--", "union", "select", "|", "&", "`", "$", "{", "}"]
+        lower_kid = kid.lower()
         for char in dangerous_chars:
-            if char in kid:
+            if char in lower_kid:
                 findings.append({
                     "severity": SEVERITY_HIGH,
                     "title": "Potential KID Injection",
